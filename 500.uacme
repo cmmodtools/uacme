@@ -1,0 +1,89 @@
+#!/bin/sh
+
+# Automatically renew uacme certificates each week
+#
+# Add the following lines to /etc/periodic.conf:
+#
+# weekly_uacme_certs (str list):	If defined, uacme(1) will try to
+#		(re)issue these certificates weekly. Leave blank to disable
+#		automatic certificate (re)issuing in periodic(8)
+# weekly_uacme_cert_XXX (str):		uacme(1) command line arguements for
+#		certificate "XXX", where "XXX" is in "weekly_uacme_certs"
+# weekly_uacme_deploy_XXX (str):	Command to be run after certificate
+#		"XXX" has been successfully (re)issued, where "XXX" is in
+#		"weekly_uacme_certs". Leave blank or not defined to disable
+#		running a command after certificate "XXX" has been (re)issued.
+#
+# For example:
+#	weekly_uacme_certs="mail wild"
+#	weekly_uacme_cert_mail="--never-create --no-ocsp --days 30 \
+#		-h /usr/local/etc/uacme/nsupdate.sh issue mail.example.com"
+#	weekly_uacme_deploy_mail="sh -c 'service dovecot reload; service postfix reload'"
+#	weekly_uacme_cert_wild="--never-create --no-ocsp --days 45 \
+#		-h /usr/local/etc/uacme/nsupdate.sh issue *.example.com"
+#	weekly_uacme_deploy_wild="service apache24 graceful"
+
+if [ -r /etc/defaults/periodic.conf ]
+then
+	. /etc/defaults/periodic.conf
+	source_periodic_confs
+fi
+uacme_cmd=/usr/local/bin/uacme
+
+reissue()
+{
+	uacme_args=$(eval echo \$weekly_uacme_cert_${cert})
+	if [ -n "$uacme_args" ]; then
+
+		"$uacme_cmd" $uacme_args
+		rc=$?
+
+		if [ $rc -eq 0 ]; then
+			echo "cert_${cert} reissued successfully"
+
+			deploy_cmd=$(eval echo \$weekly_uacme_deploy_${cert})
+			if [ -n "$deploy_cmd" ]; then
+
+				eval $deploy_cmd
+				if [ $? -eq 0 ]; then
+					echo "cert_${cert} deployed successfully"
+				else
+					rc=3
+				fi
+			fi
+		elif [ $rc -eq 1 ]; then
+			echo "cert_${cert} not reissued because it is still current"
+			rc=0
+		else
+			rc=3
+		fi
+
+	else
+		echo "cert_${cert} not found"
+		rc=2
+	fi
+
+	return $rc
+}
+
+rc=0
+if [ -n "$weekly_uacme_certs" ]; then
+	anticongestion
+
+	echo
+	echo "Reissuing uacme certificates:"
+
+	unset pids
+	for cert in $weekly_uacme_certs; do
+		reissue &
+		pids="$pids $!"
+
+	done
+
+	for pid in $pids; do
+		wait $pid
+		rc=$(($?>rc? $? : rc))
+	done
+fi
+
+exit $rc

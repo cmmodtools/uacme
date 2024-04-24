@@ -1,0 +1,31 @@
+Support files for the uacme(1) and certbot(1) ACMEv2 clients
+
+	nsupdate.sh	POSIX compliant uacme(1) hook script for the dns-01
+			challenge type with CNAME and DNAME support
+	nsupdate.conf	nsupdate.sh configuration file
+	500.uacme	periodic(8) script to automatically renew certificates
+			using uacme(1)
+	cleanup.sh	certbot(1) manual cleanup hook script
+	authenticator.sh certbot(1) manual auth hook script
+
+It is best practice to create a separate zone for the ACME challenge.
+
+	zone "_acme-challenge.example.com" {
+		type primary;
+		file "_acme-challenge.example.com";
+		dnssec-policy default;
+		inline-signing yes;
+		update-policy {
+			grant tsig-key zonesub TXT;
+		};
+	};
+
+The following records in the parent zone would redirect the ACME challenge to
+the dedicated ACME challenge zone.
+
+	$ORIGIN example.com.
+	_acme-challenge	3600	DS	; see dnssec-dsfromkey(1)
+				NS	ns1
+				NS	ns2
+	_acme-challenge.www	CNAME	www._acme-challenge
+
