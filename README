@@ -8,8 +8,13 @@ Support files for the uacme(1) and certbot(1) ACMEv2 clients
 	cleanup.sh	certbot(1) manual cleanup hook script
 	authenticator.sh certbot(1) manual auth hook script
 
+Enable TSIG in nsupdate.conf and named.conf to prevent unauthorized updates.
+
+	UACME_NSUPDATE_KEY="keyfile"
+
 It is best practice to create a separate zone for the ACME challenge.
 
+	include "keyfile";
 	zone "_acme-challenge.example.com" {
 		type primary;
 		file "_acme-challenge.example.com";
