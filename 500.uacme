@@ -16,10 +16,10 @@
 #
 # For example:
 #	weekly_uacme_certs="mail wild"
-#	weekly_uacme_cert_mail="--never-create --no-ocsp --days 30 \
+#	weekly_uacme_cert_mail="--never-create --no-ocsp --no-ari --days 30 \
 #		-h /usr/local/etc/uacme/nsupdate.sh issue mail.example.com"
 #	weekly_uacme_deploy_mail="sh -c 'service dovecot reload; service postfix reload'"
-#	weekly_uacme_cert_wild="--never-create --no-ocsp --days 45 \
+#	weekly_uacme_cert_wild="--never-create --no-ocsp --no-ari --days 45 \
 #		-h /usr/local/etc/uacme/nsupdate.sh issue *.example.com"
 #	weekly_uacme_deploy_wild="service apache24 graceful"
 
@@ -77,7 +77,6 @@ if [ -n "$weekly_uacme_certs" ]; then
 	for cert in $weekly_uacme_certs; do
 		reissue &
 		pids="$pids $!"
-
 	done
 
 	for pid in $pids; do
