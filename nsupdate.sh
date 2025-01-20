@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#  Copyright (C) 2023-2024 Michal Roszkowski
+#  Copyright (C) 2023-2025 Michal Roszkowski
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -115,10 +115,10 @@ do_nsupdate()
 	while sleep $((delay<<count)); do
 		case "$action" in
 		add)
-			is_present $nameservers || { [ $? -gt 1 ] && is_present ;} && return 0
+			is_present $nameservers || { [ $? -gt 1 ] && is_present ;} && return
 			;;
 		delete)
-			is_present $nameservers || { [ $? -gt 1 ] && is_present ;} || return 0
+			is_present $nameservers || { [ $? -gt 1 ] && is_present ;} || { [ $? -eq 1 ] && return ;}
 			;;
 		*)
 			return 1
@@ -135,7 +135,6 @@ begin)
 	case "$TYPE" in
 	dns-01)
 		do_nsupdate add
-		exit
 		;;
 	*)
 		exit 1
@@ -147,7 +146,6 @@ done|failed)
 	case "$TYPE" in
 	dns-01)
 		do_nsupdate delete
-		exit
 		;;
 	*)
 		exit 1
