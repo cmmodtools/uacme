@@ -120,8 +120,6 @@ do_nsupdate()
 		delete)
 			is_present $nameservers || { [ $? -gt 1 ] && is_present ;} || { [ $? -eq 1 ] && return ;}
 			;;
-		*)
-			return 1
 		esac
 		[ $count -lt $retries ] || break
 		count=$((count+1))
