@@ -130,25 +130,11 @@ do_nsupdate()
 
 case "$METHOD" in
 begin)
-	case "$TYPE" in
-	dns-01)
-		do_nsupdate add
-		;;
-	*)
-		exit 1
-	esac
+	[ "$TYPE" = dns-01 ] && do_nsupdate add
 	;;
-
 done|failed)
-	case "$TYPE" in
-	dns-01)
-		do_nsupdate delete
-		;;
-	*)
-		exit 1
-	esac
+	[ "$TYPE" = dns-01 ] && do_nsupdate delete
 	;;
-
 *)
 	echo "$0: invalid method" 1>&2
 	exit 1
