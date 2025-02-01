@@ -21,17 +21,19 @@ DIG=dig
 NSUPDATE=nsupdate
 
 # Config
-CONFIG_FILE=/usr/local/etc/uacme/nsupdate.conf
+CONFIG_FILE=${0%.*}.conf
 
 readonly E_BADARGS=85
 
 while getopts c: arg; do
 	case $arg in
-	c)	CONFIG_FILE="$OPTARG";;
+	c)	CONFIG_FILE=$OPTARG;;
 	?)	exit $E_BADARGS
 	esac
 done
 shift $(($OPTIND-1))
+
+. "$CONFIG_FILE"
 
 if [ $# -eq 3 ]; then
 	set -- "$1" dns-01 "$2" "$3"
@@ -40,10 +42,6 @@ elif [ $# -eq 5 ]; then
 elif [ $# -ne 4 ]; then
 	printf "Usage: %s [-c config] begin|done|failed [dns-01] ident [ignored] auth\n" "${0##*/}" >&2
 	exit $E_BADARGS
-fi
-
-if [ -r $CONFIG_FILE ]; then
-	. $CONFIG_FILE
 fi
 
 readonly AUTH=$4
