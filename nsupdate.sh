@@ -16,31 +16,38 @@
 #  along with this program; if not, write to the Free Software Foundation,
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
+# Commands
+DIG=dig
+NSUPDATE=nsupdate
+
 # Config
 CONFIG_FILE=/usr/local/etc/uacme/nsupdate.conf
+
+readonly E_BADARGS=85
+
+while getopts c: arg; do
+	case $arg in
+	c)	CONFIG_FILE="$OPTARG";;
+	?)	exit $E_BADARGS
+	esac
+done
+shift $(($OPTIND-1))
+
+if [ $# -eq 3 ]; then
+	set -- "$1" dns-01 "$2" "$3"
+elif [ $# -eq 5 ]; then
+	set -- "$1" "$2" "$3" "$5"
+elif [ $# -ne 4 ]; then
+	printf "Usage: %s [-c config] begin|done|failed [dns-01] ident [ignored] auth\n" "${0##*/}" >&2
+	exit $E_BADARGS
+fi
 
 if [ -r $CONFIG_FILE ]; then
 	. $CONFIG_FILE
 fi
 
-# Commands
-DIG=dig
-NSUPDATE=nsupdate
-
-readonly ARGS=5
-readonly E_BADARGS=85
-
-if [ $# -ne "$ARGS" ]; then
-	echo "Usage: ${0##*/} method type ident unused auth" 1>&2
-	exit $E_BADARGS
-fi
-
-readonly METHOD=$1
-readonly TYPE=$2
-readonly IDENT=$3
-readonly AUTH=$5
-
-name=_acme-challenge.${IDENT%.}.
+readonly AUTH=$4
+name=_acme-challenge.${3%.}.
 
 is_present()
 {
@@ -128,14 +135,14 @@ do_nsupdate()
 	return 1
 }
 
-case "$METHOD" in
+case "$1" in
 begin)
-	[ "$TYPE" = dns-01 ] && do_nsupdate add
+	[ "$2" = dns-01 ] && do_nsupdate add
 	;;
 done|failed)
-	[ "$TYPE" = dns-01 ] && do_nsupdate delete
+	[ "$2" = dns-01 ] && do_nsupdate delete
 	;;
 *)
-	echo "$0: invalid method" 1>&2
-	exit 1
+	printf "%s: invalid method\n" "${0##*/}" >&2
+	exit $E_BADARGS
 esac
