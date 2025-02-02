@@ -114,10 +114,9 @@ do_nsupdate()
 		$answer
 		EOF
 
-	readonly retries=5
-	readonly delay=5
-	count=0
-	while sleep $((delay<<count)); do
+	readonly retries=10
+	try=0
+	while sleep $((1<<try)); do
 		case "$action" in
 		add)
 			is_present $nameservers || { [ $? -gt 1 ] && is_present ;} && return
@@ -126,8 +125,8 @@ do_nsupdate()
 			is_present $nameservers || { [ $? -gt 1 ] && is_present ;} || { [ $? -eq 1 ] && return ;}
 			;;
 		esac
-		[ $count -lt $retries ] || break
-		count=$((count+1))
+		[ $try -lt $retries ] || break
+		try=$((try+1))
 	done
 
 	return 1
