@@ -88,8 +88,9 @@ do_nsupdate()
 			[ "$rdata" = . ] && name=${name%$owner} || name=${name%$owner}$rdata
 			;;
 		SOA)
-			zone=$owner
-			set -- $rdata && primary=$1
+			readonly name
+			readonly zone=$owner
+			set -- $rdata && readonly primary=$1
 			;;
 		esac
 	done <<-EOF
