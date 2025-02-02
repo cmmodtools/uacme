@@ -52,7 +52,7 @@ is_present()
 	rc=2
 	unset queries
 	for ns in ${@:-""}; do (
-		answer=$("$DIG" ${UACME_DIG_KEY:+-k "$UACME_DIG_KEY"} ${ns:+"@$ns" +norecurse} +noall +nottl +noclass +answer "$name" TXT) || return 2
+		answer=$("$DIG"${UACME_DIG_KEY:+ -k "$UACME_DIG_KEY"}${ns:+ "@$ns" +norecurse} +noall +nottl +noclass +answer "$name" TXT) || return 2
 
 		while read -r owner type rdata; do
 			[ "$type" = TXT ] && [ "$rdata" = "\"$AUTH\"" ] && return
@@ -77,7 +77,7 @@ do_nsupdate()
 	readonly action=$1
 
 	unset zone primary
-	answer=$("$DIG" ${UACME_DIG_KEY:+-k "$UACME_DIG_KEY"} +noall +nottl +noclass +answer +authority "$name" SOA) || return 1
+	answer=$("$DIG"${UACME_DIG_KEY:+ -k "$UACME_DIG_KEY"} +noall +nottl +noclass +answer +authority "$name" SOA) || return 1
 
 	while read -r owner type rdata; do
 		case "$type" in
@@ -98,7 +98,7 @@ do_nsupdate()
 
 	[ -n "$zone" ] && [ -n "$primary" ] || return 1
 
-	"$NSUPDATE" ${UACME_NSUPDATE_KEY:+-k "$UACME_NSUPDATE_KEY"} -v <<-EOF || return 1
+	"$NSUPDATE"${UACME_NSUPDATE_KEY:+ -k "$UACME_NSUPDATE_KEY"} -v <<-EOF || return 1
 		server ${UACME_NSUPDATE_SERVER:-$primary} $UACME_NSUPDATE_PORT
 		zone $zone
 		update $action $name 0 IN TXT "$AUTH"
@@ -106,7 +106,7 @@ do_nsupdate()
 		EOF
 
 	unset nameservers
-	answer=$("$DIG" ${UACME_DIG_KEY:+-k "$UACME_DIG_KEY"} +noall +nottl +noclass +answer "$zone" NS)
+	answer=$("$DIG"${UACME_DIG_KEY:+ -k "$UACME_DIG_KEY"} +noall +nottl +noclass +answer "$zone" NS)
 
 	while read -r owner type rdata; do
 		[ "$type" = NS ] && nameservers="$nameservers $rdata"
