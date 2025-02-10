@@ -76,8 +76,14 @@ do_nsupdate()
 {
 	readonly action=$1
 
+	case "$action" in
+	add)		readonly wanted=0;;
+	del|delete)	readonly wanted=1;;
+	*)		return 1
+	esac
+
 	unset zone primary
-	answer=$("$DIG"${UACME_DIG_KEY:+ -k "$UACME_DIG_KEY"} +noall +nottl +noclass +answer +authority "$name" SOA) || return 1
+	answer=$("$DIG"${UACME_DIG_KEY:+ -k "$UACME_DIG_KEY"} +noall +nottl +noclass +answer +authority "$name" SOA) || return 2
 
 	while read -r owner type rdata; do
 		case "$type" in
@@ -88,18 +94,17 @@ do_nsupdate()
 			[ "$rdata" = . ] && name=${name%$owner} || name=${name%$owner}$rdata
 			;;
 		SOA)
-			readonly name
-			readonly zone=$owner
-			set -- $rdata && readonly primary=$1
+			set -- $rdata
+			readonly name zone=$owner primary=$1 timeout=$(($4+$5)) negttl=$(($7>0? $7 : 1))
 			;;
 		esac
 	done <<-EOF
 		$answer
 		EOF
 
-	[ -n "$zone" ] && [ -n "$primary" ] || return 1
+	[ -n "$zone" ] && [ -n "$primary" ] || return 2
 
-	"$NSUPDATE"${UACME_NSUPDATE_KEY:+ -k "$UACME_NSUPDATE_KEY"} -v <<-EOF || return 1
+	"$NSUPDATE"${UACME_NSUPDATE_KEY:+ -k "$UACME_NSUPDATE_KEY"} -v <<-EOF || return 3
 		server ${UACME_NSUPDATE_SERVER:-$primary} $UACME_NSUPDATE_PORT
 		zone $zone
 		update $action $name 0 IN TXT "$AUTH"
@@ -115,22 +120,23 @@ do_nsupdate()
 		$answer
 		EOF
 
-	readonly retries=10
-	try=0
-	while sleep $((1<<try)); do
-		case "$action" in
-		add)
-			is_present $nameservers || { [ $? -gt 1 ] && is_present ;} && return
-			;;
-		del|delete)
-			is_present $nameservers || { [ $? -gt 1 ] && is_present ;} || { [ $? -eq 1 ] && return ;}
-			;;
-		esac
-		[ $try -lt $retries ] || break
-		try=$((try+1))
-	done
+	(trap 'exit=$?; kill $(jobs -p); exit $exit' TERM
+	interval=1
+	until
+		is_present $nameservers || { [ $? -gt 1 ] && is_present ;}
+		[ $? -eq $wanted ]
+	do
+		sleep $interval & wait $!
+		interval=$((interval<<1<negttl? interval<<1 : negttl))
+	done) & check=$!
 
-	return 1
+	(trap 'kill $(jobs -p); exit' TERM
+	sleep "${UACME_PROPAGATION_TIMEOUT:-$timeout}" & wait $!
+	kill $check 2>/dev/null) &
+
+	wait $check || return 3
+	kill $! 2>/dev/null
+	return 0
 }
 
 case "$1" in
