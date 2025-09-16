@@ -120,7 +120,7 @@ do_nsupdate()
 		$answer
 		EOF
 
-	(trap 'exit=$?; kill $(jobs -p); exit $exit' TERM
+	(trap 'kill $(jobs -p); is_present $nameservers || { [ $? -gt 1 ] && is_present ;}; [ $? -eq $wanted ]; exit' TERM
 	interval=1
 	until
 		is_present $nameservers || { [ $? -gt 1 ] && is_present ;}
