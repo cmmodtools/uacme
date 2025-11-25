@@ -120,17 +120,17 @@ do_nsupdate()
 		$answer
 		EOF
 
-	(trap 'kill $(jobs -p); is_present $nameservers || { [ $? -gt 1 ] && is_present ;}; [ $? -eq $wanted ]; exit' TERM
+	(trap 'kill $(jobs -p) 2>/dev/null; is_present $nameservers || { [ $? -gt 1 ] && is_present ;}; [ $? -eq "$wanted" ]; exit $?' TERM
 	interval=1
 	until
 		is_present $nameservers || { [ $? -gt 1 ] && is_present ;}
-		[ $? -eq $wanted ]
+		[ $? -eq "$wanted" ]
 	do
 		sleep $interval & wait $!
 		interval=$((interval<<1<negttl? interval<<1 : negttl))
 	done) & check=$!
 
-	(trap 'kill $(jobs -p); exit' TERM
+	(trap 'kill $! 2>/dev/null; exit' TERM
 	sleep "${UACME_PROPAGATION_TIMEOUT:-$timeout}" & wait $!
 	kill $check 2>/dev/null) &
 
